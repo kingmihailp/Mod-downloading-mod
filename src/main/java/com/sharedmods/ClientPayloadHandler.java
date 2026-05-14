@@ -19,16 +19,15 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class ClientPayloadHandler {
 
-    // Accumulates in-flight chunks: modName -> chunkIndex -> data
+    // modName -> chunkIndex -> data
     private static final Map<String, Map<Integer, byte[]>> pendingChunks = new ConcurrentHashMap<>();
-    private static final Map<String, Integer> expectedTotalChunks = new ConcurrentHashMap<>();
 
     public static void handleModList(ModListPayload payload, IPayloadContext context) {
-        // Clear any leftover state from a previous session
-        pendingChunks.clear();
-        expectedTotalChunks.clear();
-
         context.enqueueWork(() -> {
+            // Reset must happen inside enqueueWork — calling clear() directly on the
+            // Netty IO thread would race with concurrent handleModChunk calls.
+            pendingChunks.clear();
+
             Path modsDir = FMLPaths.MODSDIR.get();
             List<String> needed = new ArrayList<>();
 
@@ -63,22 +62,37 @@ public class ClientPayloadHandler {
 
         Map<Integer, byte[]> chunks = pendingChunks.computeIfAbsent(modName, k -> new ConcurrentHashMap<>());
         chunks.put(chunkIndex, payload.data());
-        expectedTotalChunks.put(modName, totalChunks);
 
         if (chunks.size() == totalChunks) {
             context.enqueueWork(() -> {
                 assembleAndSave(modName, chunks, totalChunks, context);
                 pendingChunks.remove(modName);
-                expectedTotalChunks.remove(modName);
             });
         }
+    }
+
+    /** Releases buffered chunk memory. Call on client disconnect. */
+    public static void cleanup() {
+        pendingChunks.clear();
     }
 
     private static void assembleAndSave(String modName, Map<Integer, byte[]> chunks,
                                         int totalChunks, IPayloadContext context) {
         try {
             int totalSize = 0;
-            for (int i = 0; i < totalChunks; i++) totalSize += chunks.get(i).length;
+            for (int i = 0; i < totalChunks; i++) {
+                byte[] chunk = chunks.get(i);
+                if (chunk == null) {
+                    // Should not happen over TCP, but guard anyway
+                    SharedModsMod.LOGGER.error("Missing chunk {} for {}, aborting assembly", i, modName);
+                    context.player().displayClientMessage(
+                        Component.literal("[SharedMods] ОШИБКА: неполная передача " + modName),
+                        false
+                    );
+                    return;
+                }
+                totalSize += chunk.length;
+            }
 
             byte[] fileData = new byte[totalSize];
             int offset = 0;
@@ -94,7 +108,8 @@ public class ClientPayloadHandler {
             SharedModsMod.LOGGER.info("Saved downloaded mod: {} ({} bytes)", modName, fileData.length);
 
             context.player().displayClientMessage(
-                Component.literal("Скачан(ы) " + modName + " — перезагрузите игру, чтобы применить!"),
+                Component.literal("Скачан(ы) " + modName
+                    + " — перезагрузите игру, чтобы применить!"),
                 false
             );
         } catch (IOException e) {
