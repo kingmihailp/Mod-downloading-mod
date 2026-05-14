@@ -48,7 +48,7 @@ public class ClientPayloadHandler {
             }
 
             context.player().displayClientMessage(
-                Component.literal("[SharedMods] Downloading " + needed.size() + " mod(s) from server..."),
+                Component.literal("[SharedMods] Скачивание " + needed.size() + " мода(ов) с сервера..."),
                 false
             );
 
@@ -94,14 +94,13 @@ public class ClientPayloadHandler {
             SharedModsMod.LOGGER.info("Saved downloaded mod: {} ({} bytes)", modName, fileData.length);
 
             context.player().displayClientMessage(
-                Component.literal("[SharedMods] Downloaded: " + modName
-                    + " — restart Minecraft to load it!"),
+                Component.literal("Скачан(ы) " + modName + " — перезагрузите игру, чтобы применить!"),
                 false
             );
         } catch (IOException e) {
             SharedModsMod.LOGGER.error("Failed to save downloaded mod: {}", modName, e);
             context.player().displayClientMessage(
-                Component.literal("[SharedMods] ERROR: could not save " + modName),
+                Component.literal("[SharedMods] ОШИБКА: не удалось сохранить " + modName),
                 false
             );
         }
