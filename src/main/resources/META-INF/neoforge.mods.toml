@@ -1,0 +1,25 @@
+modLoader="javafml"
+loaderVersion="[2,)"
+license="MIT"
+
+[[mods]]
+    modId="sharedmods"
+    version="1.0.0"
+    displayName="Shared Mods Sync"
+    description='''
+Automatically syncs mods from the server's shared_mods folder to the client's mods folder on first connection.
+'''
+
+[[dependencies.sharedmods]]
+    modId="neoforge"
+    type="required"
+    versionRange="[21.1,)"
+    ordering="NONE"
+    side="BOTH"
+
+[[dependencies.sharedmods]]
+    modId="minecraft"
+    type="required"
+    versionRange="[1.21.1,1.22)"
+    ordering="NONE"
+    side="BOTH"

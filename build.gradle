@@ -1,0 +1,32 @@
+plugins {
+    id 'java'
+    id 'net.neoforged.moddev' version '2.0.28-beta'
+}
+
+version = '1.0.0'
+group = 'com.sharedmods'
+
+base {
+    archivesName = 'shared-mods-sync'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = "21.1.172"
+
+    runs {
+        client {
+            client()
+        }
+        server {
+            server()
+        }
+    }
+
+    mods {
+        sharedmods {
+            sourceSet sourceSets.main
+        }
+    }
+}
